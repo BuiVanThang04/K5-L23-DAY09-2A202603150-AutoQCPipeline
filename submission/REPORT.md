@@ -2,7 +2,7 @@
 
 ## 1. Kết luận trước
 
-**Hold (mã 10).** Pipeline nhận 224 ảnh, loại 19 và xuất bản nháp gồm 205 ảnh. Sau khi duyệt mô phỏng 80 ảnh, còn 0 lỗi bắt buộc nhưng 38/205 ảnh (18,54%) vẫn có cảnh báo chưa duyệt, vượt ngưỡng 10%. [Tóm tắt lần chạy](reports/08_summary.json)
+Hold (mã 10). Pipeline nhận 224 ảnh, loại 19 và xuất bản nháp gồm 205 ảnh. Sau khi duyệt mô phỏng 80 ảnh, còn 0 lỗi bắt buộc nhưng 38/205 ảnh (18,54%) vẫn có cảnh báo chưa duyệt, vượt ngưỡng 10%. [Tóm tắt lần chạy](reports/08_summary.json)
 
 ## 2. Lỗi và phân việc
 
@@ -32,7 +32,7 @@ Tôi chọn `conf=0.60` để giảm báo nhầm về thiếu box và sai lớp,
 
 ## 4. Cửa chặn và điểm mù
 
-Chạy riêng với `--budget 0` cho kết quả **Rework (mã 20)**. Còn 6 lỗi `MISSING_LABEL_FILE` trên 205 ảnh và thư mục thử không có manifest xuất. Bằng chứng nằm trong `work/rep_nb/07_error_list_v3.txt`.
+Chạy riêng với `--budget 0` cho kết quả Rework (mã 20). Còn 6 lỗi `MISSING_LABEL_FILE` trên 205 ảnh và thư mục thử không có manifest xuất. Bằng chứng nằm trong `work/rep_nb/07_error_list_v3.txt`.
 
 Trên calib ở ngưỡng đã chọn, pHash bỏ sót 2/6 ca gần trùng và bộ kiểm bỏ sót 4/5 ca box lỏng. Hai nhóm này vẫn cần người kiểm khi rà soát nhãn. [Kết quả sweep](calibration/calibration.json)
 
@@ -51,7 +51,7 @@ Hai yếu tố cần kiểm thêm là 4 ảnh raw trùng test và 38/205 ảnh c
 
 ## 6. Quyết định và ghi chú AI
 
-Giữ **Hold**. Để phát hành lô 205 ảnh, cần xử lý và duyệt lại các ảnh còn cảnh báo, rồi chạy lại gate. Nếu số ảnh giữ nguyên, cần giảm từ 38 xuống tối đa 20 ảnh còn cảnh báo và giữ 0 lỗi bắt buộc.
+Giữ Hold. Để phát hành lô 205 ảnh, cần xử lý và duyệt lại các ảnh còn cảnh báo, rồi chạy lại gate. Nếu số ảnh giữ nguyên, cần giảm từ 38 xuống tối đa 20 ảnh còn cảnh báo và giữ 0 lỗi bắt buộc.
 
 - Yêu cầu chính: áp dụng bản nháp bốn module CP2 theo docstring và test có sẵn.
 - Kiểm lại: chạy `pytest` được 79/79 và đối chiếu `DUP_BOX` ở dòng 3 của `img_0001` và dòng 2 của `img_0006`.
