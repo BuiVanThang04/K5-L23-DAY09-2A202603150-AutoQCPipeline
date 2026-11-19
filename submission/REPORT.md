@@ -38,7 +38,16 @@ Trên calib ở ngưỡng đã chọn, pHash bỏ sót 2/6 ca gần trùng và b
 
 ## 5. Train raw và clean
 
-Chưa chạy. Lần nộp này tập trung vào phần QC nên chưa có số liệu để so sánh hai bộ dữ liệu.
+Tôi train YOLO26n trong 20 epoch với seed 0 và 1 cho mỗi biến thể, dùng cùng tập val và test.
+
+| Bộ train | Số ảnh đầu vào |          mAP50 |      mAP50–95 |     Precision |        Recall |
+| -------- | -------------: | -------------: | ------------: | ------------: | ------------: |
+| Raw      |            224 | 0,726 ± 0,0002 | 0,512 ± 0,004 | 0,764 ± 0,061 | 0,649 ± 0,028 |
+| Clean    |            205 |  0,700 ± 0,030 | 0,486 ± 0,013 | 0,715 ± 0,073 | 0,615 ± 0,017 |
+
+Mỗi chỉ số là trung bình ± độ lệch chuẩn giữa hai seed. mAP50 của clean thấp hơn khoảng 0,025, nhỏ hơn mức dao động 0,030 giữa hai seed của clean. Với hai seed, tôi chưa đủ cơ sở kết luận bộ clean cho chất lượng mô hình thấp hơn. [Bảng kết quả](results/comparison.md)
+
+Hai yếu tố cần kiểm thêm là 4 ảnh raw trùng test và 38/205 ảnh clean còn cảnh báo chưa duyệt. Có thể đánh giá lại bốn checkpoint trên cùng 96 ảnh test còn lại và kiểm thủ công một mẫu trong nhóm ảnh clean còn cảnh báo. [Phân tích riêng theo năm câu trong notebook](results/ANALYSIS.md)
 
 ## 6. Quyết định và ghi chú AI
 
@@ -46,4 +55,3 @@ Giữ **Hold**. Để phát hành lô 205 ảnh, cần xử lý và duyệt lạ
 
 - Yêu cầu chính: áp dụng bản nháp bốn module CP2 theo docstring và test có sẵn.
 - Kiểm lại: chạy `pytest` được 79/79 và đối chiếu `DUP_BOX` ở dòng 3 của `img_0001` và dòng 2 của `img_0006`.
-- Một lần AI hiểu sai: AI tự sửa code khi tôi chỉ yêu cầu hướng dẫn. Bản sửa được đưa về trạng thái ban đầu và chỉ áp dụng lại khi tôi yêu cầu.
