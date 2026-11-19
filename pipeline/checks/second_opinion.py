@@ -35,10 +35,100 @@ Gợi ý
 - `iou_xywh` có sẵn. Dòng nhãn hỏng không được làm script chết (dùng `ds.valid_boxes` và `parse_yolo_line` trong try).
 - Kết quả phụ thuộc mạnh vào ngưỡng: calibrate chúng ở Bước 3 thay vì đoán.
 """
-from ..common import WARN, Issue, iou_xywh, parse_yolo_line  # noqa: F401
-from ..model_cache import get_preds  # noqa: F401
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+from ..common import WARN, Dataset, Issue, iou_xywh, parse_yolo_line
+from ..model_cache import get_preds
 
 
-def run(ds, cfg, preds=None):
-    # TODO
-    raise NotImplementedError("check second_opinion chưa làm")
+def run(
+    ds: Dataset,
+    cfg: Dict[str, Any],
+    preds: Optional[Dict[str, Sequence[Sequence[float]]]] = None,
+) -> List[Issue]:
+    """Flag mismatches between YOLO labels and model predictions for review."""
+    settings = cfg["second_opinion"]
+    if preds is None:
+        preds = get_preds(ds, cfg, "checker")
+
+    issues: List[Issue] = []
+    check = "second_opinion"
+    min_iou = settings["iou_missing"]
+    for path in ds.image_files():
+        stem = path.stem
+        if stem not in preds:
+            continue
+        lines = ds.read_label_lines(stem)
+        if lines is None:
+            continue
+        image_size = ds.image_size(stem)
+        if image_size is None:
+            continue
+
+        labels: List[Tuple[int, int, Tuple[float, float, float, float]]] = []
+        for number, text in lines:
+            try:
+                class_id, cx, cy, width, height = parse_yolo_line(text)
+            except (ValueError, OverflowError):
+                continue
+            if 0 <= class_id < len(ds.classes) and width > 0 and height > 0:
+                labels.append((number, class_id, (cx, cy, width, height)))
+
+        image_width, image_height = image_size
+        fp_boxes: List[Sequence[float]] = []
+        for prediction in preds[stem]:
+            class_id, confidence = prediction[:2]
+            box = prediction[2:]
+            if confidence >= settings["fp_conf"]:
+                fp_boxes.append(box)
+
+            area = box[2] * image_width * box[3] * image_height
+            if confidence < settings["conf"] or area < settings["min_area_px"]:
+                continue
+
+            overlaps = [
+                (label_class, iou_xywh(box, label_box))
+                for _, label_class, label_box in labels
+            ]
+            candidates = [
+                (label_class, iou)
+                for label_class, iou in overlaps if iou >= min_iou
+            ]
+            if not candidates:
+                issues.append(Issue(
+                    check, WARN, "POSSIBLE_MISSING", stem,
+                    "Dự đoán không khớp box nhãn nào",
+                    extra={"conf": confidence},
+                ))
+                continue
+
+            same_class = [iou for cls, iou in candidates if cls == class_id]
+            if same_class:
+                best_iou = max(same_class)
+                if best_iou < settings["iou_loose"]:
+                    issues.append(Issue(
+                        check, WARN, "POSSIBLE_LOOSE_BOX", stem,
+                        "Box cùng lớp có IoU thấp",
+                        extra={"conf": confidence, "iou": best_iou},
+                    ))
+            else:
+                best_iou = max(iou for _, iou in candidates)
+                if best_iou >= settings["iou_match"]:
+                    issues.append(Issue(
+                        check, WARN, "POSSIBLE_WRONG_CLASS", stem,
+                        "Box khớp vị trí nhưng khác lớp dự đoán",
+                        extra={"conf": confidence, "iou": best_iou},
+                    ))
+
+        for number, _, label_box in labels:
+            best_iou = max(
+                (iou_xywh(label_box, box) for box in fp_boxes), default=0.0
+            )
+            if not fp_boxes or best_iou < min_iou:
+                issues.append(Issue(
+                    check, WARN, "POSSIBLE_FALSE_POS", stem,
+                    "Box nhãn không khớp dự đoán nào đạt ngưỡng",
+                    number, extra={"iou": best_iou},
+                ))
+
+    return issues
